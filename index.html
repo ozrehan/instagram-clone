@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram</title>
+<!-- Only external asset allowed: the Grand Hotel wordmark font -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Grand+Hotel&display=swap" rel="stylesheet">
+<style>
+/* ============ RESET & TOKENS ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#fff; --border:#dbdbdb; --text:#000; --gray:#737373; --blue:#0095f6;
+  --red:#ff3040; --ring:conic-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5);
+}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
+button{font:inherit;background:none;border:none;cursor:pointer;color:inherit}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:0;height:0}
+
+/* ============ APP LAYOUT ============ */
+#app{display:flex;min-height:100vh}
+
+/* ============ SIDEBAR (245px) ============ */
+.sidebar{width:245px;flex-shrink:0;border-right:1px solid var(--border);padding:8px 12px 20px;
+  display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;background:#fff;z-index:50}
+.wordmark{font-family:'Grand Hotel',cursive;font-size:30px;padding:25px 12px 32px;cursor:pointer}
+.nav-item{display:flex;align-items:center;gap:16px;padding:12px;margin:2px 0;border-radius:8px;
+  font-size:16px;transition:background .15s;width:100%;text-align:left}
+.nav-item:hover{background:#f2f2f2}
+.nav-item.active{font-weight:700}
+.nav-item svg{width:24px;height:24px;flex-shrink:0}
+.nav-avatar{width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.nav-spacer{flex:1}
+
+/* ============ MAIN COLUMN ============ */
+.main{flex:1;display:flex;justify-content:center;min-width:0}
+.view{display:none;width:100%}
+.view.active{display:block}
+
+/* ---- HOME: feed 470px + right rail ---- */
+#view-home.active{display:flex;justify-content:center;gap:64px;padding:0 24px}
+.feed{width:470px;max-width:100%;padding:22px 0 60px;display:flex;flex-direction:column;gap:12px}
+
+/* Stories */
+.stories{display:flex;gap:14px;overflow-x:auto;padding:16px 4px;border-bottom:1px solid #efefef;margin-bottom:4px}
+.story{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;cursor:pointer;width:76px}
+.story-ring{width:66px;height:66px;border-radius:50%;background:var(--ring);padding:3px}
+.story-ring .inner{width:100%;height:100%;border-radius:50%;background:#fff;padding:2px}
+.story-ring img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.story.seen .story-ring{background:#dbdbdb}
+.story-name{font-size:12px;color:#262626;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Post card */
+.post{border-bottom:1px solid #efefef;padding-bottom:16px;margin-bottom:8px}
+.post-head{display:flex;align-items:center;gap:10px;padding:6px 0 10px}
+.post-head .avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;cursor:pointer}
+.post-head .uname{font-weight:600;cursor:pointer}
+.post-head .uname:hover{color:#737373}
+.post-head .dot{color:var(--gray)}
+.post-head .time{color:var(--gray);font-weight:400}
+.post-head .more{margin-left:auto;font-weight:700;letter-spacing:1px;cursor:pointer;padding:4px 8px}
+.post-img-wrap{position:relative;border:1px solid var(--border);border-radius:4px;overflow:hidden;background:#fafafa}
+.post-img-wrap img.post-img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;cursor:pointer;user-select:none}
+/* double-click heart burst */
+.heart-burst{position:absolute;top:50%;left:50%;width:96px;height:96px;transform:translate(-50%,-50%) scale(0);
+  opacity:0;pointer-events:none;filter:drop-shadow(0 6px 16px rgba(0,0,0,.35))}
+.heart-burst.pop{animation:burst .8s ease-out forwards}
+@keyframes burst{0%{transform:translate(-50%,-50%) scale(0);opacity:0}
+  20%{transform:translate(-50%,-50%) scale(1.15);opacity:.95}
+  45%{transform:translate(-50%,-50%) scale(1);opacity:.95}
+  100%{transform:translate(-50%,-70%) scale(.9);opacity:0}}
+.post-actions{display:flex;align-items:center;gap:16px;padding:10px 0 6px}
+.post-actions button svg{width:26px;height:26px;display:block}
+.post-actions button:hover{opacity:.55}
+.post-actions .bookmark{margin-left:auto}
+.post-actions button.liked svg{fill:var(--red);stroke:var(--red);animation:pop .3s ease}
+.post-actions button.saved svg{fill:#000}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.likes{font-weight:600;padding:2px 0}
+.caption{line-height:1.45;padding:2px 0}
+.caption .uname{font-weight:600;margin-right:6px}
+.caption .tag{color:#00376b}
+.view-comments{color:var(--gray);padding:4px 0;cursor:pointer}
+.comments{padding:2px 0;display:flex;flex-direction:column;gap:4px}
+.comments .c .uname{font-weight:600;margin-right:6px}
+.comment-box{display:flex;align-items:center;gap:8px;padding:10px 0 4px;border-top:1px solid #efefef;margin-top:6px}
+.comment-box input{flex:1;border:none;outline:none;font-size:14px}
+.comment-box .emoji{font-size:20px;cursor:pointer}
+.comment-box .post-btn{color:var(--blue);font-weight:600;display:none}
+.comment-box .post-btn.show{display:block}
+
+/* Right rail */
+.rail{width:320px;padding:36px 0;flex-shrink:0}
+.me-row{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.me-row img{width:44px;height:44px;border-radius:50%;object-fit:cover}
+.me-row .who{flex:1}.me-row .who b{display:block;font-size:14px}.me-row .who span{color:var(--gray);font-size:14px}
+.link{color:var(--blue);font-weight:600;font-size:12px}
+.suggest-head{display:flex;justify-content:space-between;color:var(--gray);font-weight:600;font-size:14px;margin-bottom:12px}
+.suggest-head button{color:#262626;font-size:12px;font-weight:600}
+.sug-row{display:flex;align-items:center;gap:12px;padding:6px 0}
+.sug-row img{width:44px;height:44px;border-radius:50%;object-fit:cover}
+.sug-row .who{flex:1;min-width:0}.sug-row .who b{display:block;font-size:14px}
+.sug-row .who span{color:var(--gray);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-foot{color:#c7c7c7;font-size:11px;line-height:1.6;margin-top:28px;text-transform:uppercase}
+
+/* ---- REELS VIEW ---- */
+#view-reels.active{display:flex;justify-content:center;gap:24px;padding:24px 0 60px}
+.reels-col{display:flex;flex-direction:column;gap:24px;align-items:center}
+.reel{position:relative;width:360px;height:640px;max-height:82vh;border-radius:12px;overflow:hidden;background:#000}
+.reel video{width:100%;height:100%;object-fit:cover;cursor:pointer}
+.reel-grad{position:absolute;inset:0;background:linear-gradient(transparent 55%,rgba(0,0,0,.65));pointer-events:none}
+.reel-cap{position:absolute;left:12px;right:70px;bottom:14px;color:#fff}
+.reel-cap .ru{font-weight:600;font-size:14px;margin-bottom:8px}
+.reel-cap .rc{font-size:13px;line-height:1.4;margin-bottom:8px}
+.reel-cap .audio{display:flex;align-items:center;gap:8px;font-size:12px}
+.marquee{overflow:hidden;white-space:nowrap;max-width:220px}
+.marquee span{display:inline-block;animation:mq 8s linear infinite}
+@keyframes mq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.reel-rail{position:absolute;right:10px;bottom:16px;display:flex;flex-direction:column;gap:18px;align-items:center}
+.reel-rail button{display:flex;flex-direction:column;align-items:center;gap:4px;color:#fff;font-size:12px;font-weight:600}
+.reel-rail svg{width:28px;height:28px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.reel-rail button.liked svg{fill:var(--red);stroke:var(--red)}
+.reel-play-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .2s}
+.reel.paused .reel-play-hint{opacity:.9}
+
+/* ---- EXPLORE VIEW ---- */
+#view-explore{padding:24px}
+.explore-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-width:935px;margin:0 auto}
+.explore-grid .tile{position:relative;aspect-ratio:1/1;overflow:hidden;cursor:pointer;background:#fafafa}
+.explore-grid .tile img{width:100%;height:100%;object-fit:cover}
+.explore-grid .tile .ov{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;
+  justify-content:center;gap:18px;color:#fff;font-weight:700;font-size:16px;opacity:0;transition:opacity .15s}
+.explore-grid .tile:hover .ov{opacity:1}
+
+/* ---- PROFILE VIEW ---- */
+#view-profile{padding:30px 20px 60px}
+.profile-wrap{max-width:935px;margin:0 auto}
+.p-head{display:flex;gap:80px;padding:0 40px 40px;align-items:center}
+.p-avatar{width:150px;height:150px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--ring);padding:4px}
+.p-info .row1{display:flex;align-items:center;gap:20px;margin-bottom:20px}
+.p-info .row1 h2{font-weight:400;font-size:20px}
+.btn{border:1px solid var(--border);border-radius:8px;padding:7px 16px;font-weight:600;font-size:14px;background:#efefef}
+.btn:hover{background:#dbdbdb}
+.p-stats{display:flex;gap:36px;margin-bottom:20px;font-size:16px}
+.p-stats b{font-weight:600}
+.p-bio{line-height:1.5}.p-bio b{display:block}
+.p-tabs{display:flex;justify-content:center;gap:60px;border-top:1px solid var(--border);margin-bottom:4px}
+.p-tabs button{padding:16px 0;font-size:12px;letter-spacing:1px;color:var(--gray);font-weight:600;
+  border-top:1px solid transparent;margin-top:-1px}
+.p-tabs button.active{color:#000;border-top-color:#000}
+.p-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.p-grid .tile{position:relative;aspect-ratio:1/1;overflow:hidden;cursor:pointer}
+.p-grid .tile img{width:100%;height:100%;object-fit:cover}
+.p-grid .tile .ov{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;
+  justify-content:center;gap:16px;color:#fff;font-weight:700;opacity:0;transition:opacity .15s}
+.p-grid .tile:hover .ov{opacity:1}
+
+/* ---- STORY VIEWER OVERLAY ---- */
+#story-viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:100;display:none;
+  align-items:center;justify-content:center}
+#story-viewer.open{display:flex}
+.sv-card{position:relative;width:400px;max-width:92vw;height:700px;max-height:92vh;border-radius:12px;overflow:hidden;background:#111}
+.sv-card img{width:100%;height:100%;object-fit:cover}
+.sv-top{position:absolute;top:0;left:0;right:0;padding:12px;display:flex;gap:4px}
+.sv-prog{flex:1;height:3px;background:rgba(255,255,255,.35);border-radius:2px;overflow:hidden}
+.sv-prog i{display:block;height:100%;width:0;background:#fff}
+.sv-user{position:absolute;top:24px;left:12px;display:flex;align-items:center;gap:10px;color:#fff}
+.sv-user img{width:32px;height:32px;border-radius:50%;object-fit:cover}
+.sv-close{position:absolute;top:20px;right:14px;color:#fff;font-size:28px;cursor:pointer;z-index:2}
+.sv-hint{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);font-size:13px}
+
+/* toast for fake actions */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:#262626;color:#fff;
+  padding:12px 22px;border-radius:8px;font-size:14px;transition:transform .25s;z-index:200}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+@media (max-width:1100px){.rail{display:none}}
+@media (max-width:760px){.sidebar{width:72px}.sidebar .nav-item span,.wordmark{display:none}
+  .wordmark{display:block;font-size:0}.wordmark::after{content:"📸";font-size:24px}
+  .nav-item{justify-content:center}.p-head{gap:30px;padding:0 0 30px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ================= SIDEBAR ================= -->
+  <nav class="sidebar">
+    <div class="wordmark" data-nav="home">Instagram</div>
+    <div id="nav-list"></div>
+    <div class="nav-spacer"></div>
+    <button class="nav-item" data-nav="profile"><span style="font-size:20px">☰</span><span>More</span></button>
+  </nav>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+    <!-- HOME -->
+    <section class="view active" id="view-home">
+      <div class="feed">
+        <div class="stories" id="stories"></div>
+        <div id="posts"></div>
+      </div>
+      <aside class="rail">
+        <div class="me-row">
+          <img src="https://picsum.photos/seed/you-avatar/100/100" alt="you">
+          <div class="who"><b>you.exe</b><span>Shaik</span></div>
+          <button class="link" onclick="toast('Logged in as you.exe')">Switch</button>
+        </div>
+        <div class="suggest-head"><span>Suggested for you</span><button onclick="toast('See all suggestions')">See All</button></div>
+        <div id="suggestions"></div>
+        <div class="rail-foot">About · Help · Privacy · Terms<br>© 2026 Instagram clone</div>
+      </aside>
+    </section>
+    <!-- REELS -->
+    <section class="view" id="view-reels"><div class="reels-col" id="reels"></div></section>
+    <!-- EXPLORE -->
+    <section class="view" id="view-explore"><div class="explore-grid" id="explore-grid"></div></section>
+    <!-- PROFILE -->
+    <section class="view" id="view-profile"><div class="profile-wrap" id="profile-wrap"></div></section>
+  </div>
+</div>
+
+<!-- ================= STORY VIEWER ================= -->
+<div id="story-viewer">
+  <div class="sv-card" id="sv-card">
+    <div class="sv-top" id="sv-prog"></div>
+    <div class="sv-user"><img id="sv-avatar" src="" alt=""><b id="sv-name"></b><span style="opacity:.7">· 2h</span></div>
+    <div class="sv-close" id="sv-close">×</div>
+    <img id="sv-img" src="" alt="story">
+    <div class="sv-hint">Click anywhere to close</div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ================================================================
+   INSTAGRAM CLONE — vanilla JS, zero dependencies.
+   All images: picsum.photos (seeded, stable). Videos: Google's
+   public gtv-videos-bucket sample MP4s. Data lives in memory;
+   comments/likes update the DOM live.
+================================================================ */
+
+/* ---------- inline SVG icon set (stroke style like IG) ---------- */
+const ICONS = {
+  home:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>',
+  homeActive:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>',
+  search:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  explore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="3.5"/><rect x="3" y="14" width="7" height="7" rx="3.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+  reels:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
+  msg:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="13" cy="12" r="1" fill="currentColor"/><circle cx="17" cy="12" r="1" fill="currentColor"/></svg>',
+  heart:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21C7 16.5 3 13 3 8.8 3 6 5.2 4 7.8 4c1.7 0 3.2.9 4.2 2.3C13 4.9 14.5 4 16.2 4 18.8 4 21 6 21 8.8c0 4.2-4 7.7-9 12.2Z"/></svg>',
+  heartFill:'<svg viewBox="0 0 24 24" fill="#ff3040" stroke="#ff3040" stroke-width="2"><path d="M12 21C7 16.5 3 13 3 8.8 3 6 5.2 4 7.8 4c1.7 0 3.2.9 4.2 2.3C13 4.9 14.5 4 16.2 4 18.8 4 21 6 21 8.8c0 4.2-4 7.7-9 12.2Z"/></svg>',
+  comment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z"/></svg>',
+  share:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
+  bookmark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>',
+  bookmarkFill:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>',
+  plus:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>',
+  burst:   '<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 21C7 16.5 3 13 3 8.8 3 6 5.2 4 7.8 4c1.7 0 3.2.9 4.2 2.3C13 4.9 14.5 4 16.2 4 18.8 4 21 6 21 8.8c0 4.2-4 7.7-9 12.2Z"/></svg>',
+  play:    '<svg viewBox="0 0 24 24" fill="#fff" width="72" height="72"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.55)"/><path d="M10 8.5v7l6-3.5Z"/></svg>',
+  music:   '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" width="14" height="14"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
+};
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const pic = (seed, w=600, h=600) => `https://picsum.photos/seed/${seed}/${w}/${h}`;
+const fmt = n => n.toLocaleString('en-US');
+let toastT;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200); }
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ---------- seeded data ---------- */
+const ME = { user:'you.exe', name:'Shaik', avatar: pic('you-avatar',100,100) };
+
+const USERS = [
+  { user:'wander.lens',  name:'Aarav Mehta',   bio:'Chasing sunrises 🌅 | 42 countries', avatar: pic('ava-wander',100,100) },
+  { user:'spice.route',  name:'Priya Nair',    bio:'Home cook · recipes below 👇',      avatar: pic('ava-spice',100,100) },
+  { user:'circuit.break',name:'Rohan Verma',   bio:'I build robots 🤖',                  avatar: pic('ava-circuit',100,100) },
+  { user:'paws.and.claws',name:'Sneha Rao',    bio:'Rescue mom 🐾',                      avatar: pic('ava-paws',100,100) },
+  { user:'pixel.nomad',  name:'Arjun Pillai',  bio:'Street photography',                avatar: pic('ava-pixel',100,100) },
+  { user:'fit.with.isha',name:'Isha Sharma',   bio:'5AM club 🏋️',                       avatar: pic('ava-fit',100,100) },
+  { user:'brew.culture', name:'Karan Joshi',   bio:'Coffee snob ☕',                     avatar: pic('ava-brew',100,100) },
+  { user:'terra.garden', name:'Meera Iyer',    bio:'Urban jungle 🌿',                    avatar: pic('ava-terra',100,100) },
+];
+const u = name => USERS.find(x=>x.user===name);
+
+/* 6 realistic posts — travel, food, tech, pets, fitness, city */
+const POSTS = [
+  { id:0, user:'wander.lens', seed:'post-santorini', time:'2h', likes:12847, liked:false, saved:false,
+    caption:'Santorini at golden hour hits different 🌅\nSave this for your Greece itinerary ✈️',
+    tags:['#travel','#santorini','#wanderlust'],
+    comments:[ {user:'pixel.nomad', text:'This is unreal 😍 adding to the list!'},
+               {user:'you.exe',     text:'Take me there!!'} ] },
+  { id:1, user:'spice.route', seed:'post-biryani', time:'5h', likes:8932, liked:false, saved:false,
+    caption:'Sunday dum biryani recipe is finally up 🍗\nFull video in my reels — link in bio!',
+    tags:['#foodie','#biryani','#homecooking'],
+    comments:[ {user:'brew.culture', text:'The aroma came through the screen 🔥'},
+               {user:'fit.with.isha', text:'Cheat day approved 😤'} ] },
+  { id:2, user:'circuit.break', seed:'post-robot', time:'8h', likes:15230, liked:false, saved:false,
+    caption:'After 6 months of work, SPARK can finally balance on two wheels 🤖\nBuilt with ROS2 + a lot of coffee.',
+    tags:['#robotics','#engineering','#buildinpublic'],
+    comments:[ {user:'pixel.nomad', text:'Insane build quality 👏'},
+               {user:'wander.lens', text:'Skynet begins 😅'} ] },
+  { id:3, user:'paws.and.claws', seed:'post-puppy', time:'12h', likes:24511, liked:false, saved:false,
+    caption:'Meet Biscuit 🐶 rescued last week, already ruling the house.\nAdopt, don\'t shop ❤️',
+    tags:['#rescuedog','#adoptdontshop'],
+    comments:[ {user:'terra.garden', text:'Those eyes!! 😭❤️'},
+               {user:'spice.route', text:'Biscuit is the goodest boy'} ] },
+  { id:4, user:'fit.with.isha', seed:'post-gym', time:'1d', likes:6704, liked:false, saved:false,
+    caption:'Day 214 of the 5AM club 🏋️\nDiscipline > motivation. Every. Single. Time.',
+    tags:['#fitness','#5amclub','#grind'],
+    comments:[ {user:'circuit.break', text:'214 days is wild, respect 💪'} ] },
+  { id:5, user:'pixel.nomad', seed:'post-street', time:'2d', likes:11098, liked:false, saved:false,
+    caption:'Mumbai rains + old streets = magic 📸\nShot on 35mm film, no edits.',
+    tags:['#streetphotography','#mumbai','#35mm'],
+    comments:[ {user:'wander.lens', text:'Film grain makes everything better'},
+               {user:'brew.culture', text:'Framing is perfect 👌'} ] },
+];
+
+const REELS = [
+  { user:'wander.lens',  seed:'reel-bbb',   src:'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    caption:'POV: you finally booked the trip ✈️ #travel', audio:'original audio — wander.lens', likes:45200, comments:812, shares:2300 },
+  { user:'spice.route',  seed:'reel-blaze', src:'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    caption:'Flambé Friday 🔥 wait for it… #foodie', audio:'Trending — Kitchen Beats', likes:88900, comments:2104, shares:9100 },
+  { user:'circuit.break',seed:'reel-escape',src:'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    caption:'Robot obstacle course v3 🤖 #robotics', audio:'original audio — circuit.break', likes:31200, comments:640, shares:1100 },
+  { user:'paws.and.claws',seed:'reel-joy',  src:'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    caption:'Biscuit\'s first beach day 🐶🌊 #dogs', audio:'Happy — Feel Good Mix', likes:120400, comments:5300, shares:18400 },
+  { user:'fit.with.isha',seed:'reel-melt',  src:'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+    caption:'Leg day. No excuses. 🏋️ #fitness', audio:'Phonk — Gym Mode', likes:67800, comments:1900, shares:4200 },
+];
+
+const SUGGESTIONS = ['pixel.nomad','brew.culture','terra.garden','fit.with.isha','circuit.break'];
+</script>
+
+<script>
+'use strict';
+/* ================= NAV ================= */
+const NAV = [
+  { id:'home',   label:'Home',          icon:'home' },
+  { id:'search', label:'Search',        icon:'search',  fake:true },
+  { id:'explore',label:'Explore',       icon:'explore' },
+  { id:'reels',  label:'Reels',         icon:'reels' },
+  { id:'msg',    label:'Messages',      icon:'msg',     fake:true },
+  { id:'notif',  label:'Notifications', icon:'heart',   fake:true },
+  { id:'create', label:'Create',        icon:'plus',    fake:true },
+  { id:'profile',label:'Profile',       avatar:true },
+];
+let currentView = 'home';
+function renderNav(){
+  $('nav-list').innerHTML = NAV.map(n=>{
+    const active = n.id===currentView ? 'active':'';
+    const icon = n.avatar
+      ? `<img class="nav-avatar" src="${ME.avatar}" alt="">`
+      : (n.id==='home' && n.id===currentView ? ICONS.homeActive : ICONS[n.icon]);
+    return `<button class="nav-item ${active}" data-nav="${n.id}">${icon}<span>${n.label}</span></button>`;
+  }).join('');
+  document.querySelectorAll('[data-nav]').forEach(el=>{
+    el.onclick = ()=>go(el.dataset.nav);
+  });
+}
+function go(view){
+  const fake = NAV.find(n=>n.id===view)?.fake;
+  if(fake){ toast('This demo focuses on Home / Explore / Reels / Profile 🙂'); return; }
+  currentView = view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('view-'+view).classList.add('active');
+  renderNav();
+  if(view==='reels') initReels();
+  window.scrollTo(0,0);
+}
+
+/* ================= STORIES ================= */
+const storyState = {}; // user -> seen
+function renderStories(){
+  $('stories').innerHTML = USERS.map(x=>
+    `<div class="story ${storyState[x.user]?'seen':''}" data-user="${x.user}">
+       <div class="story-ring"><div class="inner"><img src="${x.avatar}" alt="${x.user}" loading="lazy"></div></div>
+       <div class="story-name">${x.user}</div>
+     </div>`).join('');
+  document.querySelectorAll('.story').forEach(s=> s.onclick = ()=>openStory(s.dataset.user));
+}
+
+/* ---------- fullscreen story viewer ---------- */
+let svTimer=null, svIdx=0, svOrder=[];
+function openStory(user){
+  svOrder = USERS.map(x=>x.user);
+  svIdx = svOrder.indexOf(user);
+  $('story-viewer').classList.add('open');
+  playStory();
+}
+function playStory(){
+  clearTimeout(svTimer);
+  const user = svOrder[svIdx], usr = u(user);
+  storyState[user] = true;
+  $('sv-avatar').src = usr.avatar;
+  $('sv-name').textContent = user;
+  // portrait story image: taller crop of a picsum seed
+  $('sv-img').src = pic('story-'+user, 600, 1000);
+  const prog = $('sv-prog');
+  prog.innerHTML = svOrder.map((_,i)=>
+    `<div class="sv-prog"><i style="width:${i<svIdx?'100%':'0'}"></i></div>`).join('');
+  const bar = prog.children[svIdx].firstChild;
+  const t0 = performance.now(), DUR = 5000;
+  (function step(t){
+    const k = Math.min(1,(t-t0)/DUR);
+    bar.style.width = (k*100)+'%';
+    if(k<1) svTimer = requestAnimationFrame(step);
+    else { // auto-advance
+      svIdx++;
+      if(svIdx < svOrder.length) playStory(); else closeStory();
+    }
+  })(t0);
+  renderStories();
+}
+function closeStory(){
+  clearTimeout(svTimer);
+  $('story-viewer').classList.remove('open');
+}
+$('sv-close').onclick = e=>{ e.stopPropagation(); closeStory(); };
+$('story-viewer').onclick = e=>{ if(e.target.id==='story-viewer' || e.target.id==='sv-card' || e.target.id==='sv-img') closeStory(); };
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeStory(); });
+</script>
+
+<script>
+'use strict';
+/* ================= FEED POSTS ================= */
+function tagify(text, tags){
+  let html = esc(text).replace(/\n/g,'<br>');
+  for(const t of tags) html += ` <span class="tag">${t}</span>`;
+  return html;
+}
+function renderPosts(){
+  $('posts').innerHTML = POSTS.map(p=>{
+    const usr = u(p.user);
+    const commentsHtml = p.comments.map(c=>
+      `<div class="c"><span class="uname">${c.user}</span>${esc(c.text)}</div>`).join('');
+    return `<article class="post" data-id="${p.id}">
+      <div class="post-head">
+        <img class="avatar" src="${usr.avatar}" alt="">
+        <span class="uname">${p.user}</span><span class="dot">•</span><span class="time">${p.time}</span>
+        <span class="more" onclick="toast('Post options')">•••</span>
+      </div>
+      <div class="post-img-wrap">
+        <img class="post-img" src="${pic(p.seed)}" alt="post" draggable="false">
+        <div class="heart-burst">${ICONS.burst}</div>
+      </div>
+      <div class="post-actions">
+        <button class="like-btn ${p.liked?'liked':''}" aria-label="like">${p.liked?ICONS.heartFill:ICONS.heart}</button>
+        <button class="cmt-btn" aria-label="comment">${ICONS.comment}</button>
+        <button aria-label="share" onclick="toast('Link copied to clipboard')">${ICONS.share}</button>
+        <button class="bookmark ${p.saved?'saved':''}" aria-label="save">${p.saved?ICONS.bookmarkFill:ICONS.bookmark}</button>
+      </div>
+      <div class="likes">${fmt(p.likes)} likes</div>
+      <div class="caption"><span class="uname">${p.user}</span>${tagify(p.caption,p.tags)}</div>
+      <div class="view-comments">View all ${p.comments.length+47} comments</div>
+      <div class="comments">${commentsHtml}</div>
+      <div class="comment-box">
+        <input type="text" placeholder="Add a comment..." maxlength="220">
+        <span class="emoji">😊</span>
+        <button class="post-btn">Post</button>
+      </div>
+    </article>`;
+  }).join('');
+
+  // wire up every post
+  document.querySelectorAll('.post').forEach(card=>{
+    const p = POSTS[+card.dataset.id];
+    const likeBtn = card.querySelector('.like-btn');
+    const likesEl = card.querySelector('.likes');
+    const burst   = card.querySelector('.heart-burst');
+    const img     = card.querySelector('.post-img');
+    const input   = card.querySelector('.comment-box input');
+    const postBtn = card.querySelector('.post-btn');
+
+    const refreshLikes = ()=>{
+      likesEl.textContent = fmt(p.likes)+' likes';
+      likeBtn.classList.toggle('liked', p.liked);
+      likeBtn.innerHTML = p.liked ? ICONS.heartFill : ICONS.heart;
+    };
+    const setLiked = v=>{ if(p.liked!==v){ p.liked=v; p.likes+= v?1:-1; refreshLikes(); } };
+
+    // single click heart toggle
+    likeBtn.onclick = ()=> setLiked(!p.liked);
+
+    // double-click image: burst + like
+    img.addEventListener('dblclick', ()=>{
+      burst.classList.remove('pop'); void burst.offsetWidth; burst.classList.add('pop');
+      setLiked(true);
+    });
+
+    // bookmark toggle
+    const bm = card.querySelector('.bookmark');
+    bm.onclick = ()=>{ p.saved=!p.saved; bm.classList.toggle('saved',p.saved);
+      bm.innerHTML = p.saved?ICONS.bookmarkFill:ICONS.bookmark;
+      toast(p.saved?'Saved to collection':'Removed from saved'); };
+
+    // comment focus button
+    card.querySelector('.cmt-btn').onclick = ()=> input.focus();
+    input.addEventListener('input', ()=> postBtn.classList.toggle('show', input.value.trim().length>0));
+    const addComment = ()=>{
+      const text = input.value.trim(); if(!text) return;
+      p.comments.push({user:ME.user, text});
+      const div = document.createElement('div');
+      div.className='c'; div.innerHTML = `<span class="uname">${ME.user}</span>${esc(text)}`;
+      card.querySelector('.comments').appendChild(div);
+      input.value=''; postBtn.classList.remove('show');
+    };
+    postBtn.onclick = addComment;
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') addComment(); });
+  });
+}
+
+/* ================= RIGHT RAIL: suggestions ================= */
+function renderSuggestions(){
+  $('suggestions').innerHTML = SUGGESTIONS.map(name=>{
+    const usr = u(name);
+    return `<div class="sug-row" data-user="${name}">
+      <img src="${usr.avatar}" alt="">
+      <div class="who"><b>${name}</b><span>${usr.bio}</span></div>
+      <button class="link follow-btn">Follow</button>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.follow-btn').forEach(b=>{
+    b.onclick = ()=>{
+      const following = b.textContent==='Follow';
+      b.textContent = following?'Following':'Follow';
+      b.style.color = following ? '#737373' : '';
+      toast(following ? 'Following' : 'Unfollowed');
+    };
+  });
+}
+</script>
+
+<script>
+'use strict';
+/* ================= REELS ================= */
+let reelsInit = false;
+const reelState = REELS.map(()=>({liked:false}));
+function renderReels(){
+  $('reels').innerHTML = REELS.map((r,i)=>{
+    const usr = u(r.user);
+    return `<div style="display:flex;gap:14px;align-items:flex-end">
+      <div class="reel" data-i="${i}">
+        <video src="${r.src}" muted loop playsinline preload="metadata"></video>
+        <div class="reel-grad"></div>
+        <div class="reel-play-hint">${ICONS.play}</div>
+        <div class="reel-cap">
+          <div class="ru">@${r.user}</div>
+          <div class="rc">${esc(r.caption)}</div>
+          <div class="audio">${ICONS.music}<div class="marquee"><span>${esc(r.audio)} &nbsp;•&nbsp; ${esc(r.audio)} &nbsp;•&nbsp;</span></div></div>
+        </div>
+        <div class="reel-rail">
+          <button class="r-like" data-i="${i}">${ICONS.heart}<span>${fmt(r.likes)}</span></button>
+          <button onclick="toast('Comments are disabled in this demo')">${ICONS.comment}<span>${fmt(r.comments)}</span></button>
+          <button onclick="toast('Link copied to clipboard')">${ICONS.share}<span>${fmt(r.shares)}</span></button>
+          <img src="${usr.avatar}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #fff">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // click video toggles play/pause
+  document.querySelectorAll('.reel').forEach(card=>{
+    const v = card.querySelector('video');
+    v.addEventListener('click', ()=>{
+      if(v.paused){ v.play(); card.classList.remove('paused'); }
+      else { v.pause(); card.classList.add('paused'); }
+    });
+  });
+  // reel like buttons
+  document.querySelectorAll('.r-like').forEach(b=>{
+    b.onclick = ()=>{
+      const i = +b.dataset.i, st = reelState[i], r = REELS[i];
+      st.liked = !st.liked; r.likes += st.liked?1:-1;
+      b.classList.toggle('liked', st.liked);
+      b.querySelector('span').textContent = fmt(r.likes);
+    };
+  });
+}
+/* autoplay the reel nearest the viewport center, pause the rest */
+function initReels(){
+  if(!reelsInit){
+    renderReels(); reelsInit = true;
+    // re-evaluate on scroll while reels view is open (registered once)
+    addEventListener('scroll', ()=>{ if(currentView==='reels') tickReels(); }, {passive:true});
+  }
+  tickReels();
+}
+function tickReels(){
+    if(currentView!=='reels') return;
+    let best=null, bestD=1e9;
+    document.querySelectorAll('.reel').forEach(card=>{
+      const r = card.getBoundingClientRect();
+      const d = Math.abs(r.top + r.height/2 - innerHeight/2);
+      if(d<bestD){ bestD=d; best=card; }
+    });
+    document.querySelectorAll('.reel').forEach(card=>{
+      const v = card.querySelector('video');
+      if(card===best && bestD < innerHeight){ v.play().catch(()=>{}); card.classList.remove('paused'); }
+      else { v.pause(); card.classList.add('paused'); }
+    });
+}
+
+/* ================= EXPLORE ================= */
+function renderExplore(){
+  const seeds = ['exp-mount','exp-city','exp-food','exp-dog','exp-beach','exp-car','exp-art','exp-gym','exp-cafe',
+                 'exp-night','exp-forest','exp-desk','exp-fest','exp-snow','exp-market','exp-bike','exp-port','exp-desert'];
+  $('explore-grid').innerHTML = seeds.map((s,i)=>
+    `<div class="tile"><img src="${pic(s,500,500)}" loading="lazy" alt="">
+       <div class="ov"><span>♥ ${fmt(1200+i*437)}</span><span>💬 ${fmt(40+i*17)}</span></div>
+     </div>`).join('');
+}
+
+/* ================= PROFILE ================= */
+function renderProfile(){
+  const gridSeeds = ['prof-1','prof-2','prof-3','prof-4','prof-5','prof-6','prof-7','prof-8','prof-9'];
+  $('profile-wrap').innerHTML = `
+    <div class="p-head">
+      <img class="p-avatar" src="${ME.avatar}" alt="">
+      <div class="p-info">
+        <div class="row1"><h2>${ME.user}</h2>
+          <button class="btn" onclick="toast('Edit profile is disabled in this demo')">Edit profile</button>
+          <button class="btn" onclick="toast('Archived stories')">View archive</button>
+        </div>
+        <div class="p-stats"><span><b>128</b> posts</span><span><b>12.4K</b> followers</span><span><b>486</b> following</span></div>
+        <div class="p-bio"><b>${ME.name}</b>building cool stuff on the internet 🚀<br>📍 Bengaluru, India</div>
+      </div>
+    </div>
+    <div class="p-tabs"><button class="active">POSTS</button><button onclick="toast('No saved posts yet')">SAVED</button><button onclick="toast('No tagged posts yet')">TAGGED</button></div>
+    <div class="p-grid">
+      ${gridSeeds.map((s,i)=>`<div class="tile"><img src="${pic(s,500,500)}" loading="lazy" alt="">
+        <div class="ov"><span>♥ ${fmt(900+i*613)}</span><span>💬 ${fmt(30+i*11)}</span></div></div>`).join('')}
+    </div>`;
+}
+
+/* ================= BOOT ================= */
+renderNav();
+renderStories();
+renderPosts();
+renderSuggestions();
+renderExplore();
+renderProfile();
+</script>
+</body>
+</html>
