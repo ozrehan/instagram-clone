@@ -40,7 +40,7 @@ IG._renderAuth = function () {
           <div class="auth-err" id="auth-err"></div>
           <div class="auth-or"><span></span>OR<span></span></div>
           <button class="auth-demo" id="auth-demo">Use a demo account</button>
-          <div class="auth-hint">Seeded accounts log in with password <b>password</b><br>e.g. <b>you.exe</b> · <b>wander.lens</b> · <b>spice.route</b></div>
+          <div class="auth-hint">Seeded accounts log in with password <b>demo1234</b><br>e.g. <b>alexsnaps</b> · <b>miavibes</b> · <b>joshtravels</b></div>
         </div>
         <div class="auth-card small">
           ${login
@@ -51,8 +51,8 @@ IG._renderAuth = function () {
     </div>`;
   IG.$('auth-switch').onclick = () => { IG._authMode = login ? 'signup' : 'login'; IG._renderAuth(); };
   IG.$('auth-demo').onclick = () => {
-    IG.$('auth-user').value = 'you.exe';
-    IG.$('auth-pass').value = 'password';
+    IG.$('auth-user').value = 'alexsnaps';
+    IG.$('auth-pass').value = 'demo1234';
     IG.$('auth-form').requestSubmit();
   };
   IG.$('auth-form').onsubmit = async e => {
