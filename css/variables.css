@@ -1,0 +1,17 @@
+/* Design tokens — Instagram light theme */
+:root{
+  --bg:#fff;
+  --border:#dbdbdb;
+  --light-border:#efefef;
+  --text:#000;
+  --gray:#737373;
+  --light-gray:#efefef;
+  --hover-gray:#f2f2f2;
+  --blue:#0095f6;
+  --dark-blue:#00376b;
+  --red:#ff3040;
+  --dark:#262626;
+  --ring:conic-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5);
+  --shadow:0 8px 30px rgba(0,0,0,.15);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
