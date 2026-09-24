@@ -1,38 +1,56 @@
-/* Explore grid with topic filter chips */
+/* Explore grid — real posts from the API, topic filter chips */
 window.IG = window.IG || {};
 
 IG.EXPLORE_TOPICS = ['All', 'Travel', 'Food', 'Animals', 'City', 'Art', 'Fitness', 'Nature'];
+IG.TOPIC_TAGS = {
+  Travel: ['travel', 'wanderlust', 'santorini', 'japan', 'kyoto', 'trekking', 'himalayas', 'adventure', 'autumn'],
+  Food: ['foodie', 'biryani', 'homecooking', 'sourdough', 'baking', 'bread', 'latteart', 'coffee', 'cafehopping'],
+  Animals: ['rescuedog', 'adoptdontshop'],
+  City: ['streetphotography', 'mumbai', 'city'],
+  Art: ['filmmaking', 'colorgrading', 'cinema', 'photography'],
+  Fitness: ['fitness', '5amclub', 'grind', 'marathon', 'running', 'nevergiveup'],
+  Nature: ['astrophotography', 'milkyway', 'nightsky', 'plants', 'urbanjungle', 'plantmom'],
+};
 
-IG.EXPLORE_TILES = [
-  { seed: 'exp-mount',  topic: 'Travel' }, { seed: 'exp-kyoto',   topic: 'Travel' },
-  { seed: 'exp-beach',  topic: 'Travel' }, { seed: 'exp-desert',  topic: 'Travel' },
-  { seed: 'exp-santorini', topic: 'Travel' }, { seed: 'exp-trek',  topic: 'Travel' },
-  { seed: 'exp-ramen',   topic: 'Food' },   { seed: 'exp-biryani', topic: 'Food' },
-  { seed: 'exp-latte',   topic: 'Food' },   { seed: 'exp-sourdough', topic: 'Food' },
-  { seed: 'exp-cake',    topic: 'Food' },   { seed: 'exp-thali',   topic: 'Food' },
-  { seed: 'exp-puppy',   topic: 'Animals' },{ seed: 'exp-kitten',  topic: 'Animals' },
-  { seed: 'exp-parrot',  topic: 'Animals' },{ seed: 'exp-horse',   topic: 'Animals' },
-  { seed: 'exp-city',    topic: 'City' },   { seed: 'exp-night',   topic: 'City' },
-  { seed: 'exp-street',  topic: 'City' },   { seed: 'exp-metro',   topic: 'City' },
-  { seed: 'exp-mural',   topic: 'Art' },    { seed: 'exp-gallery', topic: 'Art' },
-  { seed: 'exp-cinema',  topic: 'Art' },    { seed: 'exp-neon',    topic: 'Art' },
-  { seed: 'exp-gym',     topic: 'Fitness' },{ seed: 'exp-run',    topic: 'Fitness' },
-  { seed: 'exp-yoga',    topic: 'Fitness' },{ seed: 'exp-cycle',  topic: 'Fitness' },
-  { seed: 'exp-forest',  topic: 'Nature' }, { seed: 'exp-waterfall', topic: 'Nature' },
-  { seed: 'exp-milkyway',topic: 'Nature' }, { seed: 'exp-garden', topic: 'Nature' },
-];
+IG._explorePosts = [];
 
-IG.renderExplore = function () {
+IG.renderExplore = async function () {
+  try {
+    const r = await IG.req('GET', '/explore');
+    IG._explorePosts = r.posts || [];
+    IG._explorePosts.forEach(p => { IG.cache.posts[p.id] = p; });
+  } catch (e) { IG._explorePosts = []; }
+  IG._paintExplore();
+};
+
+IG._paintExplore = function () {
   const topic = IG.store.exploreTopic;
-  const tiles = IG.EXPLORE_TILES.filter(t => topic === 'All' || t.topic === topic);
+  const kw = IG.TOPIC_TAGS[topic] || [];
+  const posts = IG._explorePosts.filter(p =>
+    topic === 'All' || (p.tags || []).some(t => kw.includes(t.replace('#', '').toLowerCase())));
   IG.$('explore-chips').innerHTML = IG.EXPLORE_TOPICS.map(t =>
     `<button class="chip ${t === topic ? 'active' : ''}" data-topic="${t}">${t}</button>`).join('');
   IG.$('explore-chips').querySelectorAll('.chip').forEach(c =>
-    c.onclick = () => { IG.store.exploreTopic = c.dataset.topic; IG.renderExplore(); });
-  IG.$('explore-grid').innerHTML = tiles.map((t, i) =>
-    `<div class="tile"><img src="${IG.pic(t.seed, 500, 500)}" loading="lazy" alt="${t.topic}">
-       <div class="ov"><span>♥ ${IG.fmt(1200 + i * 437)}</span><span>💬 ${IG.fmt(40 + i * 17)}</span></div>
-     </div>`).join('');
+    c.onclick = () => { IG.store.exploreTopic = c.dataset.topic; IG._paintExplore(); });
+  IG.$('explore-grid').innerHTML = posts.length ? posts.map(p =>
+    `<div class="tile" data-pid="${IG.esc(String(p.id))}"><img src="${IG.resolveImg(p.image)}" loading="lazy" alt="">
+       <div class="ov"><span>♥ ${IG.fmt(p.likes)}</span><span>💬 ${IG.fmt(p.commentsCount)}</span></div>
+     </div>`).join('')
+    : `<div class="p-empty">Nothing here yet — be the first to post!</div>`;
   IG.$('explore-grid').querySelectorAll('.tile').forEach(tile =>
-    tile.onclick = () => IG.toast('Opening post…'));
+    tile.onclick = () => IG.openPostModal(tile.dataset.pid));
+};
+
+/* Lightweight post modal for explore/profile tiles */
+IG.openPostModal = function (pid) {
+  const p = IG.cache.posts[pid];
+  if (!p) return;
+  IG.$('create-box').innerHTML = `
+    <div class="modal-head">${IG.esc(p.username)}
+      <button class="mclose" id="pm-x">${IG.icon('close')}</button></div>
+    <div class="pm-body">${IG.postCard(p)}</div>`;
+  IG.$('pm-x').onclick = IG.closeCreate;
+  IG.$('create-modal').classList.add('open');
+  const card = IG.$('create-box').querySelector('.post');
+  IG.wirePost(card);
 };
