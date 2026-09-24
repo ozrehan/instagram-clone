@@ -1,5 +1,8 @@
 # Instagram Clone — full-stack prototype
 
+
+**Live demo:** [https://ozrehan-insta-clone.netlify.app](https://ozrehan-insta-clone.netlify.app)
+
 A pixel-faithful Instagram **web** clone with a **real backend**: accounts,
 uploads, likes, comments, follows, stories, notifications and DMs all persist
 server-side. Vanilla HTML/CSS/JS frontend, zero frameworks; Node 20 serverless
