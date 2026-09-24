@@ -72,10 +72,15 @@ function createApp(store) {
     const h = headers['authorization'] || headers['Authorization'] || '';
     const m = /^Bearer\s+(.+)$/.exec(String(h).trim());
     if (!m) return null;
-    const s = await jget(store, 'sessions/' + m[1] + '.json', null);
-    if (!s || s.expiresAt < Date.now()) return null;
-    const u = await jget(store, 'users/' + s.username + '.json', null);
-    return u || null;
+    for (let i = 0; i < 5; i++) {
+      const s = await jget(store, 'sessions/' + m[1] + '.json', null);
+      if (s && s.expiresAt >= Date.now()) {
+        const u = await jget(store, 'users/' + s.username + '.json', null);
+        if (u) return u;
+      }
+      if (i < 4) await new Promise(r => setTimeout(r, 350));
+    }
+    return null;
   }
 
   async function countsFor(username) {
@@ -487,11 +492,12 @@ function createApp(store) {
 
 /* Netlify Function entrypoint */
 exports.handler = async (event) => {
+  try { const _b = require("@netlify/blobs"); const _c = JSON.parse(Buffer.from(event.blobs, "base64").toString()); _b.setEnvironmentContext({ siteID: event.headers["x-nf-site-id"], token: _c.token, apiURL: "https://api.netlify.com" }); } catch (e) { /* not on Netlify: local tests */ }
   const { getStore } = require('@netlify/blobs');
-  const store = getStore({ name: 'instagram', consistency: 'strong' });
+  const store = getStore('instagram');
   const app = createApp(store);
   let path = event.path || '/';
-  path = path.replace(/^\/\.netlify\/functions\/api/, '') || '/';
+  path = path.replace(/^\/\.netlify\/functions\/api/, '').replace(/^\/api/, '') || '/';
   const body = event.isBase64Encoded && event.body
     ? Buffer.from(event.body, 'base64').toString('utf8')
     : (event.body || null);
