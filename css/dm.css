@@ -1,0 +1,50 @@
+/* Direct messages — thread list + conversation */
+#view-dm.active{display:flex;justify-content:center;padding:0}
+.dm-wrap{display:flex;width:935px;max-width:100%;height:100vh;
+  border-left:1px solid var(--border);border-right:1px solid var(--border);background:#fff}
+.dm-threads{width:350px;flex-shrink:0;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;min-height:0}
+.dm-threads-head{padding:20px 16px;font-size:16px;font-weight:700;
+  border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.dm-threads-list{overflow-y:auto;flex:1}
+.dm-thread{display:flex;gap:12px;padding:10px 16px;cursor:pointer;align-items:center}
+.dm-thread:hover{background:#fafafa}
+.dm-thread.active{background:var(--light-gray)}
+.dm-thread img{width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.dm-thread .who{flex:1;min-width:0}
+.dm-thread .who b{font-size:14px;display:block}
+.dm-thread .who span{color:var(--gray);font-size:13px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;display:block}
+.dm-thread .unread{background:var(--blue);color:#fff;font-size:11px;font-weight:700;
+  min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;padding:0 6px;flex-shrink:0}
+.dm-conv{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.dm-conv-head{display:flex;align-items:center;gap:12px;padding:12px 20px;
+  border-bottom:1px solid var(--border)}
+.dm-conv-head img{width:40px;height:40px;border-radius:50%;object-fit:cover}
+.dm-conv-head .who b{font-size:15px;display:flex;align-items:center}
+.dm-conv-head .status{color:var(--gray);font-size:12px}
+.dm-conv-head .spacer{flex:1}
+.dm-conv-head button{display:flex;color:var(--dark)}
+.dm-msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:6px}
+.dm-day{align-self:center;color:var(--gray);font-size:12px;margin:8px 0}
+.dm-typing{align-self:flex-start;background:var(--light-gray);border-radius:18px;
+  padding:10px 16px;font-size:13px;color:var(--gray)}
+.dm-bubble{max-width:65%;padding:10px 14px;border-radius:20px;font-size:14px;
+  line-height:1.4;position:relative;cursor:pointer;user-select:none;width:fit-content}
+.dm-bubble.in{background:var(--light-gray);align-self:flex-start;border-bottom-left-radius:6px}
+.dm-bubble.out{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:6px}
+.dm-bubble .dm-like{position:absolute;bottom:-10px;right:6px;background:#fff;
+  border:1px solid var(--border);border-radius:50%;width:22px;height:22px;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.dm-bubble .dm-like .ic{width:13px;height:13px;fill:var(--red);stroke:var(--red)}
+.dm-bubble .dmtime{display:block;font-size:10px;opacity:.65;margin-top:4px;text-align:right}
+.dm-input{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--border);align-items:center}
+.dm-input input{flex:1;border:1px solid var(--border);border-radius:20px;
+  padding:10px 16px;outline:none;font-size:14px}
+.dm-input input:focus{border-color:#a8a8a8}
+.dm-input .send{color:var(--blue);font-weight:600;display:none}
+.dm-input .send.show{display:block}
+.dm-empty{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;color:var(--gray);gap:12px;text-align:center;padding:24px}
+.dm-empty .ic{width:64px;height:64px}
