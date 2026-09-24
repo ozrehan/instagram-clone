@@ -67,9 +67,20 @@ async function main() {
   assert.deepStrictEqual(r.json.post.tags, ['#test']);
   const mid = r.json.post.image.split('/').pop();
 
-  // oversize image rejected
-  r = await call('POST', '/posts', { token: aliceToken, body: { imageData: 'data:image/jpeg;base64,' + 'A'.repeat(1200 * 1024), caption: 'big' } });
+  // oversize image rejected (over 1.5MB)
+  r = await call('POST', '/posts', { token: aliceToken, body: { imageData: 'data:image/jpeg;base64,' + 'A'.repeat(3 * 1024 * 1024), caption: 'big' } });
   assert.strictEqual(r.statusCode, 400, 'oversize image rejected');
+
+  // validation: bad usernames, short password, long caption
+  r = await call('POST', '/auth/signup', { body: { username: 'AB', password: 'secret1', name: 'X' } });
+  assert.strictEqual(r.statusCode, 400, 'short username rejected');
+  r = await call('POST', '/auth/signup', { body: { username: 'Alice!', password: 'secret1', name: 'X' } });
+  assert.strictEqual(r.statusCode, 400, 'uppercase/special username rejected');
+  r = await call('POST', '/auth/signup', { body: { username: 'carol', password: '12345', name: 'X' } });
+  assert.strictEqual(r.statusCode, 400, 'short password rejected');
+  r = await call('POST', '/posts', { token: aliceToken, body: { imageData: 'data:image/png;base64,' + PNG_1PX, caption: 'x'.repeat(501) } });
+  assert.strictEqual(r.statusCode, 400, 'caption > 500 rejected');
+  assert.ok(/^[0-9a-f]{32}$/.test(aliceToken), 'token is 32 hex chars');
 
   // 3. feed contains it
   r = await call('GET', '/feed', { token: aliceToken });
@@ -98,6 +109,16 @@ async function main() {
   assert.strictEqual(r.json.comment.text, 'nice pic!');
   r = await call('GET', '/notifications', { token: aliceToken });
   assert.ok(r.json.notifications.some(n => n.type === 'comment' && n.actor === 'bob'), 'comment notification present');
+
+  // 5b. comments GET + users search
+  r = await call('GET', `/posts/${postId}/comments`, { token: bobToken });
+  assert.strictEqual(r.statusCode, 200);
+  assert.ok(r.json.comments.some(c => c.text === 'nice pic!'), 'comment listed via GET');
+  r = await call('GET', '/users/search', { token: bobToken, query: { q: 'ali' } });
+  assert.strictEqual(r.statusCode, 200);
+  assert.ok(r.json.users.some(u => u.username === 'alice'), 'search finds alice');
+  r = await call('GET', '/users/search', { token: bobToken, query: { q: 'zzz-nope' } });
+  assert.strictEqual(r.json.users.length, 0, 'empty search -> []');
 
   // 6. follow -> profile counts
   r = await call('POST', '/users/alice/follow', { token: bobToken });
