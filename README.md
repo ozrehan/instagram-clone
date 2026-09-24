@@ -1,32 +1,85 @@
 # Instagram Clone
 
-A high-fidelity Instagram **web** clone in a single self-contained HTML file.
-Vanilla HTML/CSS/JS — no frameworks, no build step, no external JS libraries.
+A pixel-faithful, fully interactive Instagram **web** clone — vanilla HTML/CSS/JS,
+zero frameworks, zero build step. Works from `file://` or any static host.
 
 ## Features
 
-- **Sidebar nav** — Instagram wordmark (Grand Hotel font), SVG icons, active states
-- **Stories** — gradient rings, horizontal scroll, fullscreen viewer with 5s progress bar + auto-advance
-- **Feed** — 6 realistic posts; like toggle, double-click heart burst, bookmark, live comments
-- **Reels** — 9:16 muted autoplay-looping videos, click to play/pause, like rail, audio marquee
-- **Explore** — grid with hover like/comment overlays
-- **Profile** — header with stats/bio, 3-column post grid
-- **Suggested for you** rail with Follow toggles
+- **Home feed** — 18 realistic posts: like (single click), double-click heart burst,
+  save/bookmark, live comments, share, hashtags, verified badges
+- **Stories** — tray with gradient rings + seen state, fullscreen viewer with
+  progress bars, auto-advance, prev/next zones, keyboard arrows, story replies,
+  story likes
+- **Reels** — vertical player, autoplay-on-center, click play/pause, like rail,
+  mute toggle, progress bar, audio marquee
+- **Explore** — grid with topic filter chips (Travel / Food / Animals / …)
+- **Profile** — header, stats, bio, tabbed **POSTS / REELS / TAGGED** grids
+- **Direct messages** — thread list with unread badges, working conversations,
+  send with typing indicator + auto-replies, double-click a message to like it
+- **Notifications** — heart icon opens a dropdown (likes, follows, mentions)
+  with working Follow buttons
+- **Create** — upload a photo or pick a stock seed, write a caption, publish →
+  appears in feed + profile grid
+- Responsive: right rail collapses <1100px, sidebar shrinks <760px
 
-## Media
+Images: [picsum.photos](https://picsum.photos) (seeded, stable).
+Videos: Google's public `gtv-videos-bucket` sample MP4s.
+Font: Grand Hotel (wordmark) via Google Fonts — the only external asset besides media.
 
-- Images: `picsum.photos` (seeded, stable)
-- Videos: Google's public sample bucket (`storage.googleapis.com/gtv-videos-bucket/sample/…`)
-- Font: Google Fonts "Grand Hotel" (wordmark only)
+## Project structure
 
-## Run
-
-Just open `index.html` in a browser (works from `file://`), or serve it:
-
-```bash
-cd ~/workspace/instagram-clone
-python3 -m http.server 8000
-# → http://localhost:8000
+```
+instagram-clone/
+├── index.html            # markup skeleton only (views, overlays, sprite, script tags)
+├── README.md
+├── assets/
+│   └── icons.svg         # SVG sprite — source of truth (inlined into index.html)
+├── css/                  # one stylesheet per concern
+│   ├── variables.css     # design tokens
+│   ├── base.css          # reset, .ic icon helper, buttons, toast
+│   ├── layout.css        # app shell + responsive breakpoints
+│   ├── sidebar.css       # left nav
+│   ├── stories.css       # tray + fullscreen viewer
+│   ├── post.css          # post cards + right rail
+│   ├── reels.css         # vertical video player
+│   ├── explore.css       # grid + filter chips
+│   ├── profile.css       # header + tabbed grids
+│   ├── dm.css            # thread list + conversation
+│   └── modals.css        # notifications panel + create modal
+└── js/                   # plain <script> tags, dependency order, file:// safe
+    ├── app.js            # boot + wiring
+    ├── store.js          # client state (view, follows, seen stories, tabs…)
+    ├── utils/
+    │   ├── format.js     # fmt, esc, pic, compact
+    │   └── dom.js        # $, icon(), toast()
+    ├── data/
+    │   ├── users.js      # 15 users (avatar seed, bio, followers, verified)
+    │   ├── posts.js      # 18 posts (captions, hashtags, comments)
+    │   ├── stories.js    # 10 stories
+    │   ├── reels.js      # 8 reels (mp4 URLs, captions, audio)
+    │   ├── notifications.js
+    │   └── threads.js    # DM threads + histories + bot replies
+    └── components/
+        ├── sidebar.js    # nav + view router
+        ├── stories.js    # tray + viewer (progress, auto-advance, reply)
+        ├── post.js       # post card (burst, like, save, comments)
+        ├── feed.js       # home view + suggestions
+        ├── reels.js      # player (autoplay, mute, progress)
+        ├── explore.js    # grid + chips
+        ├── profile.js    # header + POSTS/REELS/TAGGED tabs
+        ├── dm.js         # threads + conversation + send + like
+        ├── notifications.js  # dropdown panel
+        └── create.js     # create-post modal (upload/seed → publish)
 ```
 
-Internet access is required for picsum images, sample videos, and the font.
+Scripts share one namespace (`window.IG`) and load in dependency order —
+no modules, no bundler, so everything works straight from `file://`.
+
+## Run it
+
+Just open `index.html` in a browser — or serve the folder:
+
+```bash
+cd instagram-clone
+python3 -m http.server 8000   # then open http://localhost:8000
+```
