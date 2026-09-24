@@ -48,3 +48,7 @@
 .or-divider{display:flex;align-items:center;gap:12px;color:var(--gray);
   font-size:12px;width:100%}
 .or-divider::before,.or-divider::after{content:"";flex:1;height:1px;background:var(--border)}
+
+/* post modal body (explore/profile tile click) */
+.pm-body { max-height: 80vh; overflow-y: auto; }
+.pm-body .post { border: none; margin: 0; }
