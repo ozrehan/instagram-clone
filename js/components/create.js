@@ -1,8 +1,8 @@
-/* Create-post modal: upload a file or pick a stock seed, add a caption,
-   publish → appears at the top of the feed and in the profile grid */
+/* Create-post modal: upload a photo (downscaled in-browser) or pick a stock
+ * photo, add a caption, publish via the API → top of feed + profile grid */
 window.IG = window.IG || {};
 
-let _createImg = null; // { imgUrl } | { seed }
+let _createImg = null; // { imageData } | { imageUrl }
 
 IG.CREATE_SEEDS = ['create-1', 'create-2', 'create-3', 'create-4',
                    'create-5', 'create-6', 'create-7', 'create-8'];
@@ -35,24 +35,29 @@ IG._renderCreateStep1 = function () {
       </div>
     </div>`;
   IG.$('create-x').onclick = IG.closeCreate;
-  IG.$('create-file').addEventListener('change', e => {
+  IG.$('create-file').addEventListener('change', async e => {
     const f = e.target.files[0];
     if (!f) return;
-    _createImg = { imgUrl: URL.createObjectURL(f) };
-    IG._renderCreateStep2();
+    try {
+      const imageData = await IG.fileToDataUrl(f);
+      _createImg = { imageData, preview: imageData };
+      IG._renderCreateStep2();
+    } catch (err) { IG.toast('Could not read that image'); }
   });
   IG.$('create-box').querySelectorAll('.create-seeds img').forEach(img => {
-    img.onclick = () => { _createImg = { seed: img.dataset.seed }; IG._renderCreateStep2(); };
+    img.onclick = () => {
+      _createImg = { imageUrl: IG.pic(img.dataset.seed, 800, 800), preview: IG.pic(img.dataset.seed, 800, 800) };
+      IG._renderCreateStep2();
+    };
   });
 };
 
 IG._renderCreateStep2 = function () {
-  const src = _createImg.imgUrl || IG.pic(_createImg.seed, 800, 800);
   IG.$('create-box').innerHTML = `
     <div class="modal-head">Create new post
       <button class="mclose" id="create-x">${IG.icon('close')}</button></div>
     <div class="create-step">
-      <div class="create-preview"><img src="${src}" alt="preview"></div>
+      <div class="create-preview"><img src="${_createImg.preview}" alt="preview"></div>
       <div class="create-caption">
         <textarea id="create-caption" placeholder="Write a caption..." maxlength="2200"></textarea>
       </div>
@@ -66,25 +71,27 @@ IG._renderCreateStep2 = function () {
   IG.$('create-share').onclick = IG.publishPost;
 };
 
-IG.publishPost = function () {
+IG.publishPost = async function () {
   const caption = (IG.$('create-caption').value || '').trim() || 'New post ✨';
-  const tags = (caption.match(/#\w+/g) || []).slice(0, 5);
-  const id = Math.max(...IG.POSTS.map(p => p.id)) + 1;
-  IG.POSTS.unshift({
-    id,
-    user: IG.ME.user,
-    seed: _createImg.seed || ('my-' + id),
-    imgUrl: _createImg.imgUrl || null,
-    time: 'now',
-    likes: 0, liked: false, saved: false,
-    caption, tags,
-    comments: [],
-  });
-  IG.closeCreate();
-  IG.store.profileTab = 'POSTS';
-  IG.renderFeed();
-  IG.go('home');
-  IG.toast('Your post has been shared 🎉');
+  const btn = IG.$('create-share');
+  btn.disabled = true;
+  btn.textContent = 'Sharing…';
+  try {
+    const payload = { caption };
+    if (_createImg.imageData) payload.imageData = _createImg.imageData;
+    else payload.imageUrl = _createImg.imageUrl;
+    const r = await IG.req('POST', '/posts', payload);
+    IG.cache.posts[r.post.id] = r.post;
+    IG.closeCreate();
+    IG.store.profileTab = 'POSTS';
+    IG.go('home');
+    await IG.renderFeed(true);
+    IG.toast('Your post has been shared 🎉');
+  } catch (e) {
+    IG.toast('Share failed: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Share';
+  }
 };
 window.publishPost = IG.publishPost;
 
