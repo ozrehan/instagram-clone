@@ -1,0 +1,29 @@
+/* Profile view — header, stats, tabbed grids */
+#view-profile{padding:30px 20px 60px}
+.profile-wrap{max-width:935px;margin:0 auto}
+.p-head{display:flex;gap:80px;padding:0 40px 40px;align-items:center}
+.p-avatar{width:150px;height:150px;border-radius:50%;object-fit:cover;
+  flex-shrink:0;background:var(--ring);padding:4px}
+.p-info{min-width:0}
+.p-info .row1{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.p-info .row1 h2{font-weight:400;font-size:20px;display:flex;align-items:center}
+.p-stats{display:flex;gap:36px;margin-bottom:20px;font-size:16px}
+.p-stats b{font-weight:600}
+.p-stats span{cursor:pointer}
+.p-bio{line-height:1.5}
+.p-bio b{display:block}
+.p-tabs{display:flex;justify-content:center;gap:60px;border-top:1px solid var(--border);margin-bottom:4px}
+.p-tabs button{padding:16px 0;font-size:12px;letter-spacing:1px;color:var(--gray);
+  font-weight:600;border-top:1px solid transparent;margin-top:-1px;
+  display:flex;align-items:center;gap:6px}
+.p-tabs button.active{color:#000;border-top-color:#000}
+.p-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.p-grid .tile{position:relative;aspect-ratio:1/1;overflow:hidden;cursor:pointer;background:#fafafa}
+.p-grid .tile img{width:100%;height:100%;object-fit:cover}
+.p-grid .tile .ov{position:absolute;inset:0;background:rgba(0,0,0,.35);
+  display:flex;align-items:center;justify-content:center;gap:16px;color:#fff;
+  font-weight:700;opacity:0;transition:opacity .15s}
+.p-grid .tile:hover .ov{opacity:1}
+.p-grid .tile .reel-tag{position:absolute;top:8px;right:8px;color:#fff}
+.p-grid .tile .reel-tag .ic{width:20px;height:20px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.p-empty{text-align:center;color:var(--gray);padding:60px 0;font-size:14px}
