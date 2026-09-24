@@ -1,0 +1,61 @@
+/* Auth screen — Instagram login/signup visual style */
+#auth-view { display: none; position: fixed; inset: 0; z-index: 200; background: #fafafa; overflow-y: auto; }
+#auth-view.open { display: block; }
+#app.authed-out { display: none; }
+
+.auth-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  gap: 48px; padding: 40px 20px;
+}
+.auth-phone { display: block; }
+.phone-frame {
+  width: 300px; height: 600px; background: #111; border-radius: 44px; padding: 12px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.25);
+}
+.phone-screen {
+  width: 100%; height: 100%; background: #fff; border-radius: 34px; overflow: hidden;
+  padding: 22px 16px; position: relative;
+}
+.phone-word { font-family: 'Grand Hotel', cursive; font-size: 34px; text-align: center; margin: 8px 0 18px; }
+.phone-story { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 14px;
+  background: conic-gradient(from 0deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5, #feda75);
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%); mask: radial-gradient(circle, transparent 58%, #000 60%);
+  position: relative; }
+.phone-story::after { content: ''; position: absolute; inset: 8px; border-radius: 50%;
+  background: linear-gradient(135deg, #a8e063, #56ab2f); }
+.phone-post { height: 150px; border-radius: 12px; margin: 10px 0;
+  background: linear-gradient(135deg, #ff9a9e, #fecfef 60%, #a18cd1); }
+.phone-post.p2 { background: linear-gradient(135deg, #4f5bd5, #962fbf 60%, #d62976); height: 110px; }
+.phone-row { font-size: 22px; display: flex; gap: 14px; padding: 2px 4px; }
+.ph-heart { color: #ed4956; }
+
+.auth-col { width: 350px; max-width: 92vw; }
+.auth-card {
+  background: #fff; border: 1px solid #dbdbdb; border-radius: 4px;
+  padding: 36px 40px 28px; text-align: center; margin-bottom: 10px;
+}
+.auth-card.small { padding: 20px; font-size: 14px; }
+.auth-word { font-family: 'Grand Hotel', cursive; font-size: 46px; margin-bottom: 24px; }
+#auth-form { display: flex; flex-direction: column; gap: 8px; }
+#auth-form input {
+  background: #fafafa; border: 1px solid #dbdbdb; border-radius: 4px;
+  padding: 11px 10px; font-size: 13px; outline: none;
+}
+#auth-form input:focus { border-color: #a8a8a8; }
+.auth-btn {
+  background: #0095f6; color: #fff; border: none; border-radius: 8px;
+  padding: 10px; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 6px;
+}
+.auth-btn:disabled { opacity: .6; cursor: default; }
+.auth-err { color: #ed4956; font-size: 13px; min-height: 18px; margin-top: 10px; }
+.auth-or { display: flex; align-items: center; gap: 12px; color: #8e8e8e; font-size: 12px; font-weight: 600; margin: 18px 0; }
+.auth-or span { flex: 1; height: 1px; background: #dbdbdb; }
+.auth-demo {
+  background: none; border: none; color: #0095f6; font-weight: 600; font-size: 14px;
+  cursor: pointer; margin-bottom: 14px;
+}
+.auth-hint { font-size: 12px; color: #8e8e8e; line-height: 1.6; }
+.auth-hint b { color: #262626; }
+.link { background: none; border: none; color: #0095f6; font-weight: 600; cursor: pointer; font-size: inherit; }
+
+@media (max-width: 800px) { .auth-phone { display: none; } }
