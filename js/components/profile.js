@@ -1,62 +1,65 @@
-/* Profile view — header, stats, tabbed POSTS / REELS / TAGGED grids */
+/* Profile view — any user, from the API. Tabs: POSTS / REELS / TAGGED */
 window.IG = window.IG || {};
 
 IG.PROFILE_TABS = ['POSTS', 'REELS', 'TAGGED'];
+IG._profileUser = null; // username being viewed; null = me
 
-/* My own posts: authored posts + anything published via Create modal */
-IG.myPosts = function () {
-  return IG.POSTS.filter(p => p.user === IG.ME.user);
+IG.viewUser = function (username) {
+  IG._profileUser = username || IG.ME.user;
+  IG.go('profile');
 };
+window.viewUser = IG.viewUser;
 
-/* Seeded grid for the profile before the user publishes anything */
-IG.PROFILE_GRID_SEEDS = ['prof-1', 'prof-2', 'prof-3', 'prof-4', 'prof-5',
-                         'prof-6', 'prof-7', 'prof-8', 'prof-9'];
-
-IG.renderProfile = function () {
-  const tab = IG.store.profileTab;
-  const mine = IG.myPosts();
+IG.renderProfile = async function () {
+  const username = IG._profileUser || IG.ME.user;
+  let data = null;
+  try {
+    data = await IG.req('GET', `/users/${encodeURIComponent(username)}`);
+  } catch (e) {
+    IG.$('profile-wrap').innerHTML = `<div class="p-empty">Couldn't load @${IG.esc(username)}</div>`;
+    return;
+  }
+  (data.posts || []).forEach(p => { IG.cache.posts[p.id] = p; });
+  const u = data.user, c = data.counts, tab = IG.store.profileTab;
+  const isMe = data.isMe;
   let gridHtml = '';
 
   if (tab === 'POSTS') {
-    const items = mine.length
-      ? mine.map(p => ({ pid: p.id, src: p.imgUrl || IG.pic(p.seed, 500, 500), likes: p.likes, comments: p.comments.length }))
-      : IG.PROFILE_GRID_SEEDS.map((s, i) => ({ pid: '', src: IG.pic(s, 500, 500), likes: 900 + i * 613, comments: 30 + i * 11 }));
-    gridHtml = items.map(it =>
-      `<div class="tile" data-pid="${it.pid}">
-        <img src="${it.src}" loading="lazy" alt="">
-        <div class="ov"><span>♥ ${IG.fmt(it.likes)}</span><span>💬 ${IG.fmt(it.comments)}</span></div>
-      </div>`).join('');
-    if (!gridHtml) gridHtml = `<div class="p-empty">No posts yet — tap Create to share your first photo 📸</div>`;
+    const items = data.posts || [];
+    gridHtml = items.length ? items.map(p =>
+      `<div class="tile" data-pid="${IG.esc(String(p.id))}">
+        <img src="${IG.resolveImg(p.image)}" loading="lazy" alt="">
+        <div class="ov"><span>♥ ${IG.fmt(p.likes)}</span><span>💬 ${IG.fmt(p.commentsCount)}</span></div>
+      </div>`).join('')
+      : `<div class="p-empty">${isMe ? 'No posts yet — tap Create to share your first photo 📸' : `@${IG.esc(username)} hasn't posted yet`}</div>`;
   } else if (tab === 'REELS') {
-    gridHtml = IG.REELS.slice(0, 6).map((r, i) =>
+    gridHtml = (IG.REELS || []).slice(0, 6).map(r =>
       `<div class="tile"><img src="${IG.reelPoster(r)}" loading="lazy" alt="">
         <span class="reel-tag">${IG.icon('reels')}</span>
         <div class="ov"><span>▶ ${IG.compact(r.likes)}</span></div>
-      </div>`).join('');
+      </div>`).join('') || `<div class="p-empty">No reels yet</div>`;
   } else {
-    const tagged = ['tag-1', 'tag-2', 'tag-3', 'tag-4', 'tag-5', 'tag-6'];
-    gridHtml = tagged.map((s, i) =>
-      `<div class="tile"><img src="${IG.pic(s, 500, 500)}" loading="lazy" alt="">
-        <div class="ov"><span>♥ ${IG.fmt(2100 + i * 521)}</span><span>💬 ${IG.fmt(48 + i * 9)}</span></div>
-      </div>`).join('');
+    gridHtml = `<div class="p-empty">No tagged photos</div>`;
   }
 
   IG.$('profile-wrap').innerHTML = `
     <div class="p-head">
-      <img class="p-avatar" src="${IG.ME.avatar}" alt="">
+      <img class="p-avatar" src="${IG.resolveImg(u.avatar)}" alt="">
       <div class="p-info">
         <div class="row1">
-          <h2>${IG.esc(IG.ME.user)}${IG.verifiedBadge(IG.ME)}</h2>
-          <button class="btn" id="p-edit">Edit profile</button>
-          <button class="btn" id="p-archive">View archive</button>
-          <button class="btn" id="p-settings" aria-label="settings">${IG.icon('settings', 'sm')}</button>
+          <h2>${IG.esc(u.username)}${u.verified ? IG.icon('verified', 'verified') : ''}</h2>
+          ${isMe
+            ? `<button class="btn" id="p-edit">Edit profile</button>
+               <button class="btn" id="p-settings" aria-label="settings">${IG.icon('settings', 'sm')}</button>`
+            : `<button class="btn-primary" id="p-follow">${data.isFollowing ? 'Following' : 'Follow'}</button>
+               <button class="btn" id="p-msg">Message</button>`}
         </div>
         <div class="p-stats">
-          <span><b>${mine.length || 128}</b> posts</span>
-          <span><b>${IG.compact(IG.ME.followers)}</b> followers</span>
-          <span><b>${IG.fmt(IG.ME.following)}</b> following</span>
+          <span><b>${IG.fmt(c.posts)}</b> posts</span>
+          <span><b>${IG.compact(c.followers)}</b> followers</span>
+          <span><b>${IG.fmt(c.following)}</b> following</span>
         </div>
-        <div class="p-bio"><b>${IG.esc(IG.ME.name)}</b>${IG.esc(IG.ME.bio).replace(/\n/g, '<br>')}</div>
+        <div class="p-bio"><b>${IG.esc(u.name)}</b>${IG.esc(u.bio || '').replace(/\n/g, '<br>')}</div>
       </div>
     </div>
     <div class="p-tabs">
@@ -66,12 +69,21 @@ IG.renderProfile = function () {
 
   IG.$('profile-wrap').querySelectorAll('.p-tabs button').forEach(b =>
     b.onclick = () => { IG.store.profileTab = b.dataset.tab; IG.renderProfile(); });
-  IG.$('p-edit').onclick = () => IG.toast('Edit profile is disabled in this demo');
-  IG.$('p-archive').onclick = () => IG.toast('No archived stories yet');
-  IG.$('p-settings').onclick = () => IG.toast('Settings');
-  IG.$('profile-wrap').querySelectorAll('.p-grid .tile').forEach(tile =>
-    tile.onclick = () => {
-      if (tile.dataset.pid) IG.go('home'); // jump to the post in feed
-      IG.toast('Opening post…');
-    });
+  const pe = IG.$('p-edit');
+  if (pe) pe.onclick = () => IG.toast('Edit profile is coming soon');
+  const ps = IG.$('p-settings');
+  if (ps) ps.onclick = () => IG.toast('Settings');
+  const pf = IG.$('p-follow');
+  if (pf) pf.onclick = async () => {
+    try {
+      const r = await IG.req('POST', `/users/${encodeURIComponent(username)}/follow`);
+      pf.textContent = r.following ? 'Following' : 'Follow';
+      IG.renderProfile();
+      IG.renderSuggestions();
+    } catch (e) { IG.toast('Could not follow'); }
+  };
+  const pm = IG.$('p-msg');
+  if (pm) pm.onclick = () => { IG.store.activeThread = username; IG.go('dm'); };
+  IG.$('profile-wrap').querySelectorAll('.p-grid .tile[data-pid]').forEach(tile =>
+    tile.onclick = () => IG.openPostModal(tile.dataset.pid));
 };
