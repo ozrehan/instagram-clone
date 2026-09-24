@@ -19,25 +19,28 @@
 const crypto = require('crypto');
 
 const SESSION_DAYS = 30;
-const MAX_IMAGE_BYTES = 800 * 1024;
+const MAX_IMAGE_BYTES = Math.floor(1.5 * 1024 * 1024);
+const MAX_CAPTION = 500;
+const USERNAME_RE = /^[a-z0-9]{3,20}$/;
 
-/* ---------------- crypto ---------------- */
+/* ---------------- crypto ----------------
+ * Passwords: SHA-256(salt + ":" + password), per-user random salt.
+ * Tokens: 32 hex chars (16 random bytes), 30-day expiry, stored server-side. */
 function hashPassword(pw) {
-  const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(pw, salt, 64);
-  return `scrypt$${salt.toString('hex')}$${hash.toString('hex')}`;
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.createHash('sha256').update(salt + ':' + pw).digest('hex');
+  return `sha256$${salt}$${hash}`;
 }
 function verifyPassword(pw, stored) {
   try {
-    const [, saltHex, hashHex] = String(stored).split('$');
-    const salt = Buffer.from(saltHex, 'hex');
-    const hash = Buffer.from(hashHex, 'hex');
-    const test = crypto.scryptSync(pw, salt, 64);
-    return test.length === hash.length && crypto.timingSafeEqual(test, hash);
+    const [scheme, salt, hash] = String(stored).split('$');
+    if (scheme !== 'sha256' || !salt || !hash) return false;
+    const test = crypto.createHash('sha256').update(salt + ':' + pw).digest('hex');
+    return test.length === hash.length && crypto.timingSafeEqual(Buffer.from(test, 'hex'), Buffer.from(hash, 'hex'));
   } catch { return false; }
 }
 const rid = p => p + Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
-const newToken = () => crypto.randomBytes(32).toString('hex');
+const newToken = () => crypto.randomBytes(16).toString('hex'); // 32 hex chars
 
 /* ---------------- store helpers ---------------- */
 const jget = async (store, key, fb = null) => {
@@ -70,7 +73,7 @@ function createApp(store) {
 
   async function authUser(headers) {
     const h = headers['authorization'] || headers['Authorization'] || '';
-    const m = /^Bearer\s+(.+)$/.exec(String(h).trim());
+    const m = /^Bearer\s+([0-9a-fA-F]{32})$/.exec(String(h).trim());
     if (!m) return null;
     for (let i = 0; i < 5; i++) {
       const s = await jget(store, 'sessions/' + m[1] + '.json', null);
@@ -191,9 +194,9 @@ function createApp(store) {
 
       if (seg[0] === 'auth' && seg[1] === 'signup' && method === 'POST') {
         const { username = '', password = '', name = '' } = body || {};
-        const uname = String(username).trim();
-        if (!/^[a-zA-Z0-9._]{2,30}$/.test(uname)) return err(400, 'username: 2-30 chars, letters/numbers/._');
-        if (String(password).length < 4) return err(400, 'password: min 4 chars');
+        const uname = String(username).trim().toLowerCase();
+        if (!USERNAME_RE.test(uname)) return err(400, 'username must be 3-20 lowercase letters/digits');
+        if (String(password).length < 6) return err(400, 'password must be at least 6 characters');
         if (!String(name).trim()) return err(400, 'name required');
         if (await store.get(`users/${uname}.json`)) return err(409, 'username taken');
         const user = {
@@ -202,6 +205,11 @@ function createApp(store) {
           verified: false, createdAt: Date.now(), passwordHash: hashPassword(String(password)),
         };
         await jset(store, `users/${uname}.json`, user);
+        // New users follow the demo accounts so their feed isn't empty.
+        try {
+          const { DEMO_USERS } = require('./seed');
+          await jset(store, `follows/${uname}.json`, (DEMO_USERS || []).filter(u => u !== uname));
+        } catch { await jset(store, `follows/${uname}.json`, []); }
         const token = newToken();
         await jset(store, `sessions/${token}.json`, { username: uname, expiresAt: Date.now() + SESSION_DAYS * 864e5 });
         return ok({ token, user: publicUser(user) });
@@ -238,6 +246,21 @@ function createApp(store) {
 
       if (seg[0] === 'me' && method === 'GET') {
         return ok({ user: publicUser(me), counts: await countsFor(meName) });
+      }
+
+      if (seg[0] === 'users' && seg[1] === 'search' && method === 'GET') {
+        const qstr = String(q.q || '').toLowerCase().trim();
+        if (!qstr) return ok({ users: [] });
+        const { blobs } = await store.list({ prefix: 'users/' });
+        const following = await jget(store, `follows/${meName}.json`, []);
+        const out = [];
+        for (const b of blobs) {
+          const u = await jget(store, b.key, null);
+          if (!u || u.username === meName) continue;
+          if (u.username.includes(qstr) || String(u.name).toLowerCase().includes(qstr))
+            out.push({ ...publicUser(u), isFollowing: following.includes(u.username) });
+        }
+        return ok({ users: out.slice(0, 25) });
       }
 
       if (seg[0] === 'users' && seg.length === 1 && method === 'GET') {
@@ -301,7 +324,9 @@ function createApp(store) {
       }
 
       if (seg[0] === 'posts' && seg.length === 1 && method === 'POST') {
-        const caption = String((body && body.caption) || '').slice(0, 2200) || 'New post ✨';
+        const rawCaption = String((body && body.caption) || '');
+        if (rawCaption.length > MAX_CAPTION) return err(400, `caption max ${MAX_CAPTION} characters`);
+        const caption = rawCaption || 'New post ✨';
         const r = await storeImage(body && body.imageData, body && body.imageUrl, 'm');
         if (r.error) return err(400, r.error);
         const tags = (caption.match(/#\w+/g) || []).slice(0, 5);
@@ -351,6 +376,13 @@ function createApp(store) {
         if (saves.includes(p.id)) { saved = false; await jset(store, `saves/${meName}.json`, saves.filter(x => x !== p.id)); }
         else { saved = true; saves.push(p.id); await jset(store, `saves/${meName}.json`, saves); }
         return ok({ saved });
+      }
+
+      if (seg[0] === 'posts' && seg[1] && seg[2] === 'comments' && method === 'GET') {
+        const p = await jget(store, `posts/${seg[1]}.json`, null);
+        if (!p) return err(404, 'post not found');
+        const comments = await jget(store, `comments/${p.id}.json`, []);
+        return ok({ comments });
       }
 
       if (seg[0] === 'posts' && seg[1] && seg[2] === 'comments' && method === 'POST') {
@@ -490,24 +522,79 @@ function createApp(store) {
   return { handle };
 }
 
-/* Netlify Function entrypoint */
+/* Netlify Function entrypoint.
+ * Mirrors the proven whatsapp-clone pattern: configure @netlify/blobs from
+ * the injected event context; if anything fails, fall back to an ephemeral
+ * in-memory store so the function always answers instead of crashing. */
 exports.handler = async (event) => {
-  try { const _b = require("@netlify/blobs"); const _c = JSON.parse(Buffer.from(event.blobs, "base64").toString()); _b.setEnvironmentContext({ siteID: event.headers["x-nf-site-id"], token: _c.token, apiURL: "https://api.netlify.com" }); } catch (e) { /* not on Netlify: local tests */ }
-  const { getStore } = require('@netlify/blobs');
-  const store = getStore('instagram');
-  const app = createApp(store);
-  let path = event.path || '/';
-  path = path.replace(/^\/\.netlify\/functions\/api/, '').replace(/^\/api/, '') || '/';
-  const body = event.isBase64Encoded && event.body
-    ? Buffer.from(event.body, 'base64').toString('utf8')
-    : (event.body || null);
-  return app.handle({
-    method: event.httpMethod,
-    path,
-    query: event.queryStringParameters || {},
-    headers: event.headers || {},
-    body,
-  });
+  let store = null;
+  try {
+    const blobs = require("@netlify/blobs");
+    try {
+      const _c = JSON.parse(Buffer.from(event.blobs, "base64").toString());
+      blobs.setEnvironmentContext({
+        siteID: event.headers["x-nf-site-id"],
+        token: _c.token,
+        apiURL: "https://api.netlify.com",
+      });
+    } catch (e) { /* not on Netlify: local tests */ }
+    store = blobs.getStore("instagram");
+    // Probe early so a misconfigured Blobs env fails here, inside try/catch.
+    await store.get("__probe__").catch(() => null);
+  } catch (e) {
+    store = null;
+  }
+  if (!store) {
+    // Ephemeral in-memory store. Mimics the @netlify/blobs subset the app uses.
+    const mem = new Map();
+    const toBuf = (v) => Buffer.isBuffer(v) ? v : Buffer.from(String(v), "utf8");
+    store = {
+      get: async (k, opts) => {
+        if (!mem.has(k)) return null;
+        const v = mem.get(k);
+        if (opts && opts.type === "arrayBuffer") {
+          const b = toBuf(v);
+          return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+        }
+        return v;
+      },
+      set: async (k, v) => { mem.set(k, v); },
+      delete: async (k) => { mem.delete(k); },
+      list: async (opts) => {
+        const prefix = (opts && opts.prefix) || "";
+        const keys = [...mem.keys()].filter((k) => k.startsWith(prefix)).sort();
+        return { blobs: keys.map((key) => ({ key })) };
+      },
+    };
+  }
+  try {
+    const app = createApp(store);
+    let path = event.path || "/";
+    // Strip the function mount prefix (covers direct invokes)...
+    path = path.replace(/^\/\.netlify\/functions\/api/, "");
+    // ...and the public /api prefix (covers the _redirects rewrite).
+    path = path.replace(/^\/api/, "") || "/";
+    if (!path.startsWith("/")) path = "/" + path;
+    const body = event.isBase64Encoded && event.body
+      ? Buffer.from(event.body, "base64").toString("utf8")
+      : (event.body || null);
+    return await app.handle({
+      method: event.httpMethod,
+      path,
+      query: event.queryStringParameters || {},
+      headers: event.headers || {},
+      body,
+    });
+  } catch (e) {
+    return {
+      statusCode: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({ error: "internal error" }),
+    };
+  }
 };
 
 exports.createApp = createApp;
