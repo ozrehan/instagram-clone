@@ -1,0 +1,38 @@
+/* Stories tray + fullscreen story viewer */
+.stories{display:flex;gap:14px;overflow-x:auto;padding:16px 4px;
+  border-bottom:1px solid var(--light-border);margin-bottom:4px}
+.story{display:flex;flex-direction:column;align-items:center;gap:6px;
+  flex-shrink:0;cursor:pointer;width:76px}
+.story-ring{width:66px;height:66px;border-radius:50%;background:var(--ring);padding:3px}
+.story-ring .inner{width:100%;height:100%;border-radius:50%;background:#fff;padding:2px}
+.story-ring img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.story.seen .story-ring{background:var(--border)}
+.story-name{font-size:12px;color:var(--dark);max-width:76px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+
+/* Fullscreen viewer */
+#story-viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;
+  display:none;align-items:center;justify-content:center}
+#story-viewer.open{display:flex}
+.sv-card{position:relative;width:400px;max-width:92vw;height:700px;max-height:92vh;
+  border-radius:12px;overflow:hidden;background:#111}
+.sv-card>img.sv-img{width:100%;height:100%;object-fit:cover}
+.sv-top{position:absolute;top:0;left:0;right:0;padding:12px;display:flex;gap:4px;z-index:2}
+.sv-prog{flex:1;height:3px;background:rgba(255,255,255,.35);border-radius:2px;overflow:hidden}
+.sv-prog i{display:block;height:100%;width:0;background:#fff}
+.sv-user{position:absolute;top:24px;left:12px;display:flex;align-items:center;
+  gap:10px;color:#fff;z-index:2;font-size:14px}
+.sv-user img{width:32px;height:32px;border-radius:50%;object-fit:cover}
+.sv-close{position:absolute;top:20px;right:14px;color:#fff;cursor:pointer;z-index:3}
+.sv-close .ic{width:28px;height:28px}
+.sv-nav{position:absolute;top:0;bottom:0;width:33%;z-index:1;cursor:pointer}
+.sv-nav.prev{left:0}.sv-nav.next{right:0}
+/* reply bar inside viewer */
+.sv-reply{position:absolute;bottom:14px;left:12px;right:12px;display:flex;
+  gap:8px;align-items:center;z-index:2}
+.sv-reply input{flex:1;background:transparent;border:1px solid rgba(255,255,255,.7);
+  border-radius:20px;padding:10px 16px;color:#fff;outline:none;font-size:14px}
+.sv-reply input::placeholder{color:rgba(255,255,255,.75)}
+.sv-reply button{color:#fff;display:flex}
+.sv-reply button .ic{width:26px;height:26px}
+.sv-reply button.liked .ic{fill:var(--red);stroke:var(--red)}
