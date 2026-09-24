@@ -1,0 +1,17 @@
+/* App shell layout */
+#app{display:flex;min-height:100vh}
+.main{flex:1;display:flex;justify-content:center;min-width:0}
+.view{display:none;width:100%}
+.view.active{display:block}
+
+@media (max-width:1100px){.rail{display:none}}
+@media (max-width:760px){
+  .sidebar{width:72px}
+  .sidebar .nav-item span,.sidebar .wordmark span{display:none}
+  .nav-item{justify-content:center}
+  .p-head{gap:30px!important;padding:0 0 30px!important}
+  .dm-threads{width:100%!important}
+  .dm-conv{display:none}
+  .dm-wrap.thread-open .dm-threads{display:none}
+  .dm-wrap.thread-open .dm-conv{display:flex}
+}
